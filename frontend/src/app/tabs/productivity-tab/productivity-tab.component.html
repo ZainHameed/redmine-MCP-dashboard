@@ -1,0 +1,48 @@
+<mat-card>
+  <mat-card-title>Productivity</mat-card-title>
+  <mat-card-content>
+    <mat-form-field appearance="fill" style="margin-bottom: 16px; min-width: 200px;">
+      <mat-label>Show</mat-label>
+      <mat-select [(ngModel)]="range" name="range" (selectionChange)="fetchProductivity()">
+        <mat-option *ngFor="let r of ranges" [value]="r.value">{{ r.label }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <div *ngIf="loading" style="display: flex; justify-content: center; margin: 24px 0;">
+      <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+    </div>
+    <div *ngIf="error" style="color: red;">{{ error }}</div>
+    <table mat-table [dataSource]="productivityTickets" class="mat-elevation-z2" *ngIf="!loading && productivityTickets.length > 0">
+      <ng-container matColumnDef="ticket">
+        <th mat-header-cell *matHeaderCellDef>Ticket</th>
+        <td mat-cell *matCellDef="let t">
+          <a [href]="'https://redmine.rolustech.com/issues/' + t.ticket" target="_blank">#{{ t.ticket }}</a>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="subject">
+        <th mat-header-cell *matHeaderCellDef>Subject</th>
+        <td mat-cell *matCellDef="let t">{{ t.subject }}</td>
+      </ng-container>
+      <ng-container matColumnDef="estimated_hours">
+        <th mat-header-cell *matHeaderCellDef>Estimated Time (h)</th>
+        <td mat-cell *matCellDef="let t">{{ t.estimated_hours !== null ? t.estimated_hours : 'N/A' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="time_spent">
+        <th mat-header-cell *matHeaderCellDef>Time Spent (h)</th>
+        <td mat-cell *matCellDef="let t">{{ t.time_spent }}</td>
+      </ng-container>
+      <ng-container matColumnDef="productivity">
+        <th mat-header-cell *matHeaderCellDef>Productivity (%)</th>
+        <td mat-cell *matCellDef="let t">{{ t.productivity !== null ? t.productivity + '%' : 'N/A' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="link">
+        <th mat-header-cell *matHeaderCellDef>Link</th>
+        <td mat-cell *matCellDef="let t">
+          <a [href]="'https://redmine.rolustech.com/issues/' + t.ticket" target="_blank">Open in Redmine</a>
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="['ticket', 'subject', 'estimated_hours', 'time_spent', 'productivity', 'link']"></tr>
+      <tr mat-row *matRowDef="let row; columns: ['ticket', 'subject', 'estimated_hours', 'time_spent', 'productivity', 'link'];"></tr>
+    </table>
+    <div *ngIf="!loading && productivityTickets.length === 0 && !error" style="margin: 16px 0;">No productivity data for selected period.</div>
+  </mat-card-content>
+</mat-card>

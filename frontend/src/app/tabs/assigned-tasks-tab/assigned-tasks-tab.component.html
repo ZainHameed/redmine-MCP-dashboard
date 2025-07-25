@@ -1,0 +1,34 @@
+<mat-card>
+  <mat-card-title>Assigned Tasks (Project: Panavid Fixed Cost Projects)</mat-card-title>
+  <mat-card-content>
+    <div *ngIf="loading" style="display: flex; justify-content: center; margin: 24px 0;">
+      <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+    </div>
+    <div *ngIf="error" style="color: red;">{{ error }}</div>
+    <table mat-table [dataSource]="assignedTasks" class="mat-elevation-z2" *ngIf="!loading && assignedTasks.length > 0">
+      <ng-container matColumnDef="id">
+        <th mat-header-cell *matHeaderCellDef>Task ID</th>
+        <td mat-cell *matCellDef="let task">
+          <a [href]="'https://redmine.rolustech.com/issues/' + task.id" target="_blank"><strong>#{{ task.id }}</strong></a>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="subject">
+        <th mat-header-cell *matHeaderCellDef>Subject</th>
+        <td mat-cell *matCellDef="let task">{{ task.subject }}</td>
+      </ng-container>
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let task">{{ task.status }}</td>
+      </ng-container>
+      <ng-container matColumnDef="link">
+        <th mat-header-cell *matHeaderCellDef>Link</th>
+        <td mat-cell *matCellDef="let task">
+          <a [href]="'https://redmine.rolustech.com/issues/' + task.id" target="_blank">Open in Redmine</a>
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="['id', 'subject', 'status', 'link']"></tr>
+      <tr mat-row *matRowDef="let row; columns: ['id', 'subject', 'status', 'link'];"></tr>
+    </table>
+    <div *ngIf="!loading && assignedTasks.length === 0" style="margin: 16px 0;">No assigned tasks found.</div>
+  </mat-card-content>
+</mat-card>

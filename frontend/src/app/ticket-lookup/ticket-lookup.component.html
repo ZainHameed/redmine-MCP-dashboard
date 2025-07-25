@@ -1,0 +1,30 @@
+<mat-card>
+  <mat-card-title>Ticket Lookup</mat-card-title>
+  <mat-card-content>
+    <form (ngSubmit)="fetchTicketDetails()" style="display: flex; gap: 16px; align-items: center; margin-bottom: 16px;">
+      <mat-form-field appearance="outline">
+        <mat-label>Ticket Number</mat-label>
+        <input matInput [(ngModel)]="ticketInput" name="ticketInput" placeholder="Enter Ticket Number" (ngModelChange)="onInputChange()" />
+      </mat-form-field>
+      <button mat-icon-button color="primary" type="submit" style="height: 56px; width: 56px; margin-top: 4px;">
+        <mat-icon>search</mat-icon>
+      </button>
+    </form>
+    <div *ngIf="loading" style="display: flex; justify-content: center; margin: 12px 0;">
+      <mat-progress-spinner mode="indeterminate" diameter="32"></mat-progress-spinner>
+    </div>
+    <div *ngIf="error" style="color: red;">{{ error }}</div>
+    <mat-card *ngIf="ticketDetails" style="margin-top: 16px; position: relative;">
+      <button mat-icon-button color="warn" (click)="closeDetails()" style="position: absolute; top: 8px; right: 8px;">
+        <mat-icon>close</mat-icon>
+      </button>
+      <mat-card-title>Ticket #{{ ticketDetails.id }}</mat-card-title>
+      <mat-card-content>
+        <p><strong>Subject:</strong> {{ ticketDetails.subject }}</p>
+        <p><strong>Status:</strong> {{ ticketDetails.status && ticketDetails.status.name }}</p>
+        <p><strong>Description:</strong> {{ ticketDetails.description }}</p>
+        <p><a [href]="'https://redmine.rolustech.com/issues/' + ticketDetails.id" target="_blank">View in Redmine</a></p>
+      </mat-card-content>
+    </mat-card>
+  </mat-card-content>
+</mat-card>

@@ -1,0 +1,30 @@
+<mat-card>
+  <mat-card-title>Projects</mat-card-title>
+  <mat-card-content>
+    <div *ngIf="loading" style="display: flex; justify-content: center; margin: 24px 0;">
+      <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+    </div>
+    <div *ngIf="error" style="color: red;">{{ error }}</div>
+    <table mat-table [dataSource]="projects" class="mat-elevation-z2" *ngIf="!loading && !error && projects.length > 0">
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef>Project Name</th>
+        <td mat-cell *matCellDef="let project">
+          <a [href]="'https://redmine.rolustech.com/projects/' + project.identifier" target="_blank"><strong>{{ project.name }}</strong></a>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="description">
+        <th mat-header-cell *matHeaderCellDef>Description</th>
+        <td mat-cell *matCellDef="let project">{{ project.description || 'No description' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="link">
+        <th mat-header-cell *matHeaderCellDef>Link</th>
+        <td mat-cell *matCellDef="let project">
+          <a [href]="'https://redmine.rolustech.com/projects/' + project.identifier" target="_blank">Open in Redmine</a>
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="['name', 'description', 'link']"></tr>
+      <tr mat-row *matRowDef="let row; columns: ['name', 'description', 'link'];"></tr>
+    </table>
+    <div *ngIf="!loading && !error && projects.length === 0" style="margin: 16px 0;">No projects found.</div>
+  </mat-card-content>
+</mat-card>

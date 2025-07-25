@@ -1,0 +1,44 @@
+<div style="position: absolute; top: 1.5rem; right: 2rem; z-index: 10;">
+  <span style="font-weight: bold; color: #3f51b5; background: #fff; border-radius: 20px; padding: 8px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">👤 zain.hameed</span>
+</div>
+<mat-card style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+  <h1 style="margin: 0;">Redmine Projects Dashboard</h1>
+</mat-card>
+<mat-card style="margin-bottom: 20px;">
+  <app-ticket-lookup></app-ticket-lookup>
+</mat-card>
+<mat-tab-group [(selectedIndex)]="tabIndex" mat-stretch-tabs>
+  <mat-tab>
+    <ng-template mat-tab-label>
+      <mat-icon>dashboard</mat-icon> My Projects
+    </ng-template>
+    <ng-template matTabContent>
+      <app-projects-tab></app-projects-tab>
+    </ng-template>
+  </mat-tab>
+  <mat-tab>
+    <ng-template mat-tab-label>
+      <mat-icon>assignment</mat-icon> Assigned Tasks
+    </ng-template>
+    <ng-template matTabContent>
+      <app-assigned-tasks-tab></app-assigned-tasks-tab>
+    </ng-template>
+  </mat-tab>
+  <mat-tab>
+    <ng-template mat-tab-label>
+      <mat-icon>schedule</mat-icon> Time Log
+    </ng-template>
+    <ng-template matTabContent>
+      <app-time-log-tab></app-time-log-tab>
+    </ng-template>
+  </mat-tab>
+  <mat-tab>
+    <ng-template mat-tab-label>
+      <mat-icon>bar_chart</mat-icon> Productivity
+    </ng-template>
+    <ng-template matTabContent>
+      <app-productivity-tab></app-productivity-tab>
+    </ng-template>
+  </mat-tab>
+</mat-tab-group>
+

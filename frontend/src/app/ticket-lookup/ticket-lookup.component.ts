@@ -2,6 +2,7 @@ import { Component, OnDestroy } from '@angular/core';
 import { RedmineService } from '../redmine.service';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
+import { getIssueUrl } from '../core/constants/redmine.constants';
 
 @Component({
   selector: 'app-ticket-lookup',
@@ -53,5 +54,9 @@ export class TicketLookupComponent implements OnDestroy {
 
   ngOnDestroy() {
     this.searchSub.unsubscribe();
+  }
+
+  getIssueUrl(ticketId: number): string {
+    return getIssueUrl(ticketId);
   }
 }

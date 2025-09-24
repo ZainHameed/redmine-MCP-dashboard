@@ -1,6 +1,8 @@
 {
-  "mcp-server-redmine": {
-    "REDMINE_HOST": "https://redmine.rolustech.com/projects.json",
-    "REDMINE_API_KEY": "cfdcc03184edf6acafb3ec7fd5196fc3b044ca0c"
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["chrome-devtools-mcp@latest"]
+    }
   }
-} 
+}

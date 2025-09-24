@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { RedmineService } from '../../redmine.service';
+import { getProjectUrl } from '../../core/constants/redmine.constants';
 
 @Component({
   selector: 'app-projects-tab',
@@ -26,5 +27,9 @@ export class ProjectsTabComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  getProjectUrl(projectIdentifier: string): string {
+    return getProjectUrl(projectIdentifier);
   }
 }

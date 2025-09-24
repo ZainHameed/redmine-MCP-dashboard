@@ -23,7 +23,7 @@
         <p><strong>Subject:</strong> {{ ticketDetails.subject }}</p>
         <p><strong>Status:</strong> {{ ticketDetails.status && ticketDetails.status.name }}</p>
         <p><strong>Description:</strong> {{ ticketDetails.description }}</p>
-        <p><a [href]="'https://redmine.rolustech.com/issues/' + ticketDetails.id" target="_blank">View in Redmine</a></p>
+        <p><a [href]="getIssueUrl(ticketDetails.id)" target="_blank">View in Redmine</a></p>
       </mat-card-content>
     </mat-card>
   </mat-card-content>

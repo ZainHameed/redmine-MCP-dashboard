@@ -9,7 +9,7 @@
       <ng-container matColumnDef="name">
         <th mat-header-cell *matHeaderCellDef>Project Name</th>
         <td mat-cell *matCellDef="let project">
-          <a [href]="'https://redmine.rolustech.com/projects/' + project.identifier" target="_blank"><strong>{{ project.name }}</strong></a>
+          <a [href]="getProjectUrl(project.identifier)" target="_blank"><strong>{{ project.name }}</strong></a>
         </td>
       </ng-container>
       <ng-container matColumnDef="description">
@@ -19,7 +19,7 @@
       <ng-container matColumnDef="link">
         <th mat-header-cell *matHeaderCellDef>Link</th>
         <td mat-cell *matCellDef="let project">
-          <a [href]="'https://redmine.rolustech.com/projects/' + project.identifier" target="_blank">Open in Redmine</a>
+          <a [href]="getProjectUrl(project.identifier)" target="_blank">Open in Redmine</a>
         </td>
       </ng-container>
       <tr mat-header-row *matHeaderRowDef="['name', 'description', 'link']"></tr>

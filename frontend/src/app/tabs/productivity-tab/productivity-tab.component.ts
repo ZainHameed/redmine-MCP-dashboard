@@ -1,13 +1,16 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Subject, Observable } from 'rxjs';
+import { takeUntil, switchMap, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { RedmineService } from '../../redmine.service';
-import { forkJoin } from 'rxjs';
+import { WHITELISTED_PROJECTS } from '../../core/constants/projects.constants';
+import { getIssueUrl } from '../../core/constants/redmine.constants';
 
 @Component({
   selector: 'app-productivity-tab',
   templateUrl: './productivity-tab.component.html',
   styleUrls: ['./productivity-tab.component.css']
 })
-export class ProductivityTabComponent implements OnInit {
+export class ProductivityTabComponent implements OnInit, OnDestroy {
   productivityTickets: any[] = [];
   loading = true;
   error = '';
@@ -19,11 +22,88 @@ export class ProductivityTabComponent implements OnInit {
     { value: 'last_month', label: 'Last Month' }
   ];
   displayedColumns: string[] = ['ticket', 'subject', 'estimated_hours', 'time_spent', 'productivity', 'link'];
+  
+  // New properties for user and project selection
+  allUsers: any[] = []; // All users from API
+  filteredUsers: any[] = []; // Users filtered by selected projects
+  selectedUser: any = null;
+  selectedProjects: number[] = [];
+  whitelistedProjects = WHITELISTED_PROJECTS;
+
+  // Request cancellation properties
+  private destroy$ = new Subject<void>();
+  private productivityRequest$ = new Subject<{userId: number, projectIds: number[], fromDate?: string, toDate?: string}>();
+  private usersRequest$ = new Subject<void>();
 
   constructor(private redmine: RedmineService) {}
 
   ngOnInit() {
-    this.fetchProductivity();
+    // Initialize with all whitelisted projects selected
+    this.selectedProjects = this.whitelistedProjects.map(p => p.id);
+    
+    // Set up request cancellation for users data
+    this.usersRequest$.pipe(
+      switchMap(() => this.redmine.getUsers()),
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (users) => {
+        this.allUsers = users;
+        this.filterUsersBySelectedProjects();
+        // Auto-select first filtered user if available
+        if (this.filteredUsers.length > 0) {
+          this.selectedUser = this.filteredUsers[0];
+          this.fetchProductivity();
+        }
+      },
+      error: (err) => {
+        this.error = err.message || 'Failed to load users.';
+      }
+    });
+    
+    // Trigger initial users load
+    this.usersRequest$.next();
+    
+    // Set up request cancellation for productivity data
+    this.productivityRequest$.pipe(
+      debounceTime(300), // Debounce to avoid too many rapid requests
+      distinctUntilChanged((prev, curr) => 
+        prev.userId === curr.userId && 
+        JSON.stringify(prev.projectIds) === JSON.stringify(curr.projectIds) &&
+        prev.fromDate === curr.fromDate && 
+        prev.toDate === curr.toDate
+      ),
+      switchMap(params => {
+        this.loading = true;
+        this.error = '';
+        return this.redmine.getProductivity(params.userId, params.projectIds, params.fromDate, params.toDate);
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (data) => {
+        this.productivityTickets = data.map(item => ({
+          ticket: item.ticket,
+          subject: item.subject,
+          estimated_hours: item.estimated_hours,
+          time_spent: item.time_spent,
+          productivity: item.productivity,
+          link: getIssueUrl(item.ticket),
+          created_on: item.created_on,
+          updated_on: item.updated_on,
+          status: item.status,
+          project_name: item.project_name
+        }));
+        this.loading = false;
+      },
+      error: (err) => {
+        this.error = err.message || 'Failed to load productivity data.';
+        this.loading = false;
+      }
+    });
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   getDateRange(range: string) {
@@ -57,63 +137,66 @@ export class ProductivityTabComponent implements OnInit {
     return { from, to };
   }
 
+  loadUsers() {
+    // Trigger the users request through the subject (this will cancel any pending requests)
+    this.usersRequest$.next();
+  }
+
+  filterUsersBySelectedProjects() {
+    if (this.selectedProjects.length === 0) {
+      this.filteredUsers = [];
+    } else {
+      this.filteredUsers = this.allUsers.filter(user => 
+        this.selectedProjects.includes(user.project_id)
+      );
+    }
+    
+    // If current selected user is not in filtered users, clear selection
+    if (this.selectedUser && !this.filteredUsers.find(u => u.id === this.selectedUser.id)) {
+      this.selectedUser = null;
+    }
+  }
+
   fetchProductivity() {
-    this.loading = true;
-    this.error = '';
+    if (!this.selectedUser || this.selectedProjects.length === 0) {
+      this.productivityTickets = [];
+      this.loading = false;
+      return;
+    }
+    
+    // Get date range for filtering
     const { from, to } = this.getDateRange(this.range);
-    this.redmine.getTimeLogs(from, to).subscribe({
-      next: (logs) => {
-        const ticketMap: {[key: string]: {time_spent: number}} = {};
-        logs.forEach(log => {
-          const id = log.issue && log.issue.id ? log.issue.id : '';
-          if (!id) return;
-          if (!ticketMap[id]) {
-            ticketMap[id] = { time_spent: 0 };
-          }
-          ticketMap[id].time_spent += log.hours;
-        });
-        const ticketIds = Object.keys(ticketMap);
-        if (ticketIds.length === 0) {
-          this.productivityTickets = [];
-          this.loading = false;
-          return;
-        }
-        const ticketDetailRequests = ticketIds.map(id => this.redmine.getTicketDetails(id));
-        const ticketTimeLogRequests = ticketIds.map(id => this.redmine.getTicketTimeLogs(id));
-        forkJoin([forkJoin(ticketDetailRequests), forkJoin(ticketTimeLogRequests)]).subscribe({
-          next: ([ticketDetails, ticketTimeLogs]) => {
-            const results: any[] = [];
-            ticketIds.forEach((id, idx) => {
-              const ticket = ticketDetails[idx];
-              const allLogs = ticketTimeLogs[idx];
-              const estimated = ticket.estimated_hours || null;
-              const subject = ticket.subject || '';
-              const totalSpent = allLogs.reduce((sum, log) => sum + (log.hours || 0), 0);
-              // Only include if assigned_to.id is 194 (Zain Hameed)
-              if (ticket.assigned_to && ticket.assigned_to.id === 194) {
-                const productivity = estimated ? Math.round((estimated / totalSpent) * 100) : null;
-                results.push({
-                  ticket: id,
-                  subject,
-                  estimated_hours: estimated,
-                  time_spent: totalSpent,
-                  productivity
-                });
-              }
-            });
-            this.productivityTickets = results;
-            this.loading = false;
-          },
-          error: (err) => {
-            this.error = err.message || 'Failed to load productivity data.';
-            this.loading = false;
-          }
-        });
-      },
-      error: (err) => {
-        this.error = err.message || 'Failed to load productivity data.';
-        this.loading = false;
-      }
+    
+    // Trigger the request through the subject (this will cancel any pending requests)
+    this.productivityRequest$.next({
+      userId: this.selectedUser.id,
+      projectIds: this.selectedProjects,
+      fromDate: from,
+      toDate: to
     });
+  }
+
+  onUserChange() {
+    this.fetchProductivity();
+  }
+
+  onProjectChange() {
+    this.filterUsersBySelectedProjects();
+    // Auto-select first filtered user if no user is selected
+    if (!this.selectedUser && this.filteredUsers.length > 0) {
+      this.selectedUser = this.filteredUsers[0];
+    }
+    this.fetchProductivity();
+  }
+
+  onDateRangeChange() {
+    this.fetchProductivity();
+  }
+
+  getDateRangeLabel() {
+    const { from, to } = this.getDateRange(this.range);
+    const fromDate = new Date(from).toLocaleDateString();
+    const toDate = new Date(to).toLocaleDateString();
+    return `${fromDate} to ${toDate}`;
   }
 }

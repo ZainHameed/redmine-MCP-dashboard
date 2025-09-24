@@ -10,23 +10,35 @@ export class RedmineService {
     return this.http.get<any[]>('/api/projects');
   }
 
-  getAssignedTasks(): Observable<any[]> {
-    return this.http.get<any[]>('/api/assigned-tasks');
+  getAssignedTasks(projectId?: number, userId?: number): Observable<any[]> {
+    let url = '/api/assigned-tasks';
+    const params = new URLSearchParams();
+    if (projectId) params.append('project_id', projectId.toString());
+    if (userId) params.append('user_id', userId.toString());
+    if (params.toString()) url += '?' + params.toString();
+    return this.http.get<any[]>(url);
   }
 
-  getTimeLogs(from: string, to: string): Observable<any[]> {
-    return this.http.get<any[]>(`/api/timelog?from=${from}&to=${to}`);
+  getUsers(): Observable<any[]> {
+    return this.http.get<any[]>('/api/users');
   }
 
-  logTime(entry: { hours: number; ticket: string; date: string; comment: string }): Observable<any> {
-    return this.http.post('/api/timelog', entry);
+  getProductivity(userId: number, projectIds: number[], fromDate?: string, toDate?: string): Observable<any[]> {
+    const params: any = {
+      user_id: userId.toString(),
+      project_ids: projectIds.join(',')
+    };
+    
+    if (fromDate && toDate) {
+      params.from_date = fromDate;
+      params.to_date = toDate;
+    }
+    
+    return this.http.get<any[]>(`/api/productivity`, { params });
   }
 
   getTicketDetails(id: string): Observable<any> {
     return this.http.get<any>(`/api/tickets/${id}`);
   }
 
-  getTicketTimeLogs(id: string): Observable<any[]> {
-    return this.http.get<any[]>(`/api/ticket-timelogs/${id}`);
-  }
 }

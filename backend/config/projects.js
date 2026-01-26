@@ -9,12 +9,6 @@
 // Configure which projects to enable for productivity and time log features
 const WHITELISTED_PROJECTS = [
   {
-    id: 18,
-    name: 'Rolustech',
-    key: 'ROLUSTECH',
-    description: 'Main Rolustech project'
-  },
-  {
     id: 944,
     name: 'Panavid Fixed Cost Projects',
     key: 'PANAVID',

@@ -133,8 +133,13 @@ testem.log
 .DS_Store
 Thumbs.db
 
-# Deployment files (keep deployment scripts but ignore sensitive data)
-# Note: Keep deploy.sh and deployment guides, but ignore any generated configs
+# Deployment scripts (contain credentials - do not commit)
+deploy.sh
+*deploy*.sh
+deploy-*.sh
+*.deploy.sh
+
+# Deployment config backups
 *.env.backup
 *.env.template
 ecosystem.config.js.backup

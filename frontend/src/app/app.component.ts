@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import { filter } from 'rxjs/operators';
 import { environment } from '../environments/environment';
 
 @Component({
@@ -9,7 +10,7 @@ import { environment } from '../environments/environment';
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
-export class AppComponent {
+export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   activeTab: string = 'projects';
   projects: any[] = [];
   ticketDetails: any = null;
@@ -31,14 +32,44 @@ export class AppComponent {
     this.fetchProjects();
     
     // Set initial tab based on current route
+    this.updateTabFromRoute();
+    
+    // Listen for route changes to update tab
+    this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe((event) => {
+        console.log('Navigation ended, URL:', (event as NavigationEnd).url); // Debug log
+        this.updateTabFromRoute();
+      });
+  }
+
+  ngOnDestroy() {
+    // Cleanup if needed
+  }
+
+  ngAfterViewInit() {
+    // Ensure tab is set correctly after view is initialized
+    setTimeout(() => {
+      this.updateTabFromRoute();
+    }, 100);
+  }
+
+  private updateTabFromRoute() {
     const currentUrl = this.router.url;
-    if (currentUrl.includes('/productivity')) {
-      this.tabIndex = 1;
-      this.activeTab = 'productivity';
-    } else {
-      this.tabIndex = 0;
-      this.activeTab = 'projects';
-    }
+    console.log('Current URL:', currentUrl); // Debug log
+    
+    // Use setTimeout to ensure DOM is ready
+    setTimeout(() => {
+      if (currentUrl.includes('/productivity')) {
+        this.tabIndex = 1;
+        this.activeTab = 'productivity';
+        console.log('Set tab to productivity, tabIndex:', this.tabIndex); // Debug log
+      } else {
+        this.tabIndex = 0;
+        this.activeTab = 'projects';
+        console.log('Set tab to projects, tabIndex:', this.tabIndex); // Debug log
+      }
+    }, 0);
   }
 
   setTab(tab: string) {

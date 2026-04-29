@@ -20,6 +20,10 @@ const routes: Routes = [
     loadChildren: () => import('./features/ticket-lookup/ticket-lookup.module').then(m => m.TicketLookupModule)
   },
   {
+    path: 'bulk-ticket-creator',
+    loadChildren: () => import('./features/bulk-ticket-creator/bulk-ticket-creator.module').then(m => m.BulkTicketCreatorModule)
+  },
+  {
     path: '**',
     redirectTo: '/projects'
   }

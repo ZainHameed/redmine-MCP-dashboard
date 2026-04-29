@@ -1,0 +1,26 @@
+{
+  "name": "redmine-mcp-dashboard",
+  "version": "1.0.0",
+  "description": "Redmine MCP Dashboard - Full-stack application with Angular frontend and Express backend",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" --names \"backend,frontend\" --prefix-colors \"blue,green\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm start",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\" --names \"backend,frontend\" --prefix-colors \"blue,green\"",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm start",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "keywords": [
+    "redmine",
+    "mcp",
+    "dashboard",
+    "angular",
+    "express"
+  ],
+  "author": "",
+  "license": "ISC"
+}

@@ -1,0 +1,149 @@
+<div class="bulk-ticket-creator">
+  <h2>Bulk Ticket Creator</h2>
+  
+  <p-steps [model]="steps" [(activeIndex)]="currentStep"></p-steps>
+
+  <div class="step-content">
+    <!-- Step 1: Upload & Map -->
+    <div *ngIf="currentStep === 0" class="step-panel">
+      <p-card>
+        <h3>Step 1: Upload CSV & Map Columns</h3>
+        
+        <div class="upload-section">
+          <label for="csv-file" class="file-label">
+            <input 
+              type="file" 
+              id="csv-file" 
+              accept=".csv"
+              (change)="onFileSelected($event)"
+              class="file-input">
+            <span class="file-button">Choose CSV File</span>
+          </label>
+          <span *ngIf="selectedFile" class="file-name">{{ selectedFile.name }}</span>
+        </div>
+
+        <div *ngIf="csvHeaders.length > 0" class="mapper-section">
+          <app-column-mapper
+            [csvHeaders]="csvHeaders"
+            [initialMapping]="columnMapping"
+            (mappingChange)="onMappingChange($event)">
+          </app-column-mapper>
+        </div>
+
+        <div class="project-selector">
+          <label>Project:</label>
+          <p-dropdown
+            [options]="projects"
+            [(ngModel)]="projectId"
+            (ngModelChange)="onProjectChange()"
+            optionLabel="name"
+            optionValue="id"
+            placeholder="Select Project"
+            styleClass="project-dropdown">
+          </p-dropdown>
+        </div>
+
+        <div class="user-story-selector" *ngIf="projectId">
+          <label>User Story (Optional):</label>
+          <div *ngIf="loadingUserStories" class="loading-indicator">
+            <span>Loading user stories...</span>
+          </div>
+          <p-dropdown
+            *ngIf="!loadingUserStories"
+            [options]="userStories"
+            [(ngModel)]="userStoryId"
+            optionLabel="subject"
+            optionValue="id"
+            [showClear]="true"
+            placeholder="Select User Story (or leave empty)"
+            styleClass="user-story-dropdown">
+          </p-dropdown>
+          <small class="help-text">Select a user story to link all tickets under it. Leave empty to create standalone tickets.</small>
+        </div>
+      </p-card>
+    </div>
+
+    <!-- Step 2: Preview & Polish -->
+    <div *ngIf="currentStep === 1" class="step-panel">
+      <p-card>
+        <h3>Step 2: Preview & Edit Tickets</h3>
+        
+        <app-ticket-tree-preview
+          [tree]="ticketTree"
+          [projectId]="projectId"
+          (treeChange)="onTreeChange($event)">
+        </app-ticket-tree-preview>
+      </p-card>
+    </div>
+
+    <!-- Step 3: Execute -->
+    <div *ngIf="currentStep === 2" class="step-panel">
+      <p-card>
+        <h3>Step 3: Execute & Results</h3>
+        
+        <div *ngIf="executing" class="executing">
+          <p-progressSpinner></p-progressSpinner>
+          <p *ngIf="creationProgress.total > 0">
+            Creating {{ creationProgress.current }}/{{ creationProgress.total }} tickets...
+          </p>
+          <p *ngIf="creationProgress.total === 0">Creating tickets...</p>
+        </div>
+
+        <div *ngIf="!executing && executionResults" class="results">
+          <h4>Execution Summary</h4>
+          <div class="summary-stats">
+            <div class="stat">
+              <span class="stat-label">Total:</span>
+              <span class="stat-value">{{ executionResults.summary.total }}</span>
+            </div>
+            <div class="stat success">
+              <span class="stat-label">Succeeded:</span>
+              <span class="stat-value">{{ executionResults.summary.succeeded }}</span>
+            </div>
+            <div class="stat error" *ngIf="executionResults.summary.failed > 0">
+              <span class="stat-label">Failed:</span>
+              <span class="stat-value">{{ executionResults.summary.failed }}</span>
+            </div>
+          </div>
+
+          <button 
+            pButton 
+            label="Download Results CSV" 
+            icon="pi pi-download"
+            (click)="onDownloadResults()"
+            class="download-button">
+          </button>
+          
+          <button 
+            *ngIf="executionResults"
+            pButton 
+            label="Cleanup Test Tickets" 
+            icon="pi pi-trash"
+            (click)="onCleanupTestTickets()"
+            class="cleanup-button"
+            styleClass="p-button-danger">
+          </button>
+        </div>
+      </p-card>
+    </div>
+  </div>
+
+  <div class="navigation-buttons">
+    <button 
+      pButton 
+      label="Back" 
+      (click)="onBack()"
+      [disabled]="currentStep === 0"
+      class="nav-button">
+    </button>
+    <button 
+      pButton 
+      [label]="currentStep === 1 ? 'Create Tickets' : 'Next'" 
+      (click)="onNext()"
+      [disabled]="!canProceed() || executing"
+      class="nav-button primary">
+    </button>
+  </div>
+
+  <p-toast></p-toast>
+</div>

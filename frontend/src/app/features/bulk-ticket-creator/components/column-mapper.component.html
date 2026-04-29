@@ -1,0 +1,39 @@
+<div class="column-mapper">
+  <h3>Map CSV Columns to Redmine Fields</h3>
+  
+  <div class="mapping-container">
+    <div class="csv-columns">
+      <h4>CSV Columns</h4>
+      <div class="columns-list">
+        <div *ngFor="let header of csvHeaders" class="column-item">
+          {{ header }}
+        </div>
+      </div>
+    </div>
+
+    <div class="redmine-fields">
+      <h4>Redmine Fields</h4>
+      <div class="fields-list">
+        <div *ngFor="let field of redmineFields" class="field-item">
+          <label>
+            {{ field.label }}
+            <span *ngIf="field.required" class="required">*</span>
+          </label>
+          <select 
+            [value]="getMappingValue(field.key)"
+            (change)="onFieldChange(field.key, $any($event.target).value)"
+            class="field-select">
+            <option value="">-- Select Column --</option>
+            <option *ngFor="let header of csvHeaders" [value]="header">
+              {{ header }}
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="validation-message" *ngIf="!isMappingValid()">
+    <p class="error">Subject or Task column mapping is required</p>
+  </div>
+</div>

@@ -1,0 +1,94 @@
+.tree-preview {
+  padding: 20px;
+}
+
+.loading,
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.invalid-row {
+  background-color: #ffebee !important;
+}
+
+::ng-deep .p-treetable .p-treetable-tbody > tr.invalid-row > td {
+  background-color: #ffebee !important;
+}
+
+.level-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.level-story {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.level-task {
+  background-color: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.level-subtask {
+  background-color: #e8f5e9;
+  color: #388e3c;
+}
+
+.estimate-input {
+  width: 100%;
+  padding: 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.estimate-input.invalid {
+  border-color: #f44336;
+}
+
+.assignee-dropdown {
+  width: 100%;
+}
+
+.assignee-dropdown.invalid {
+  border-color: #f44336;
+}
+
+.original-name {
+  display: block;
+  font-size: 12px;
+  color: #f44336;
+  margin-top: 4px;
+}
+
+.no-users-message {
+  font-size: 12px;
+  color: #999;
+  font-style: italic;
+  padding: 8px;
+  display: inline-block;
+}
+
+.validation-warning {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  color: #856404;
+}
+
+::ng-deep .p-treetable .p-treetable-tbody > tr > td {
+  padding: 12px;
+}
+
+::ng-deep .p-treetable .p-treetable-thead > tr > th {
+  padding: 12px;
+  background-color: #f5f5f5;
+  font-weight: 600;
+}

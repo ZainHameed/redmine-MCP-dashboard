@@ -11,6 +11,7 @@ const usersRoutes = require('./users.routes');
 const ticketsRoutes = require('./tickets.routes');
 const productivityRoutes = require('./productivity.routes');
 const healthRoutes = require('./health.routes');
+const bulkTicketsRoutes = require('./bulk-tickets.routes');
 
 // Register route modules
 router.use('/projects', projectsRoutes);
@@ -19,6 +20,7 @@ router.use('/assigned-tasks', ticketsRoutes); // Note: /assigned-tasks is handle
 router.use('/tickets', ticketsRoutes);
 router.use('/productivity', productivityRoutes);
 router.use('/health', healthRoutes);
+router.use('/bulk-tickets', bulkTicketsRoutes);
 
 module.exports = router;
 

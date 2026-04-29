@@ -1,0 +1,76 @@
+<div class="tree-preview">
+  <h3>Preview & Edit Tickets</h3>
+  
+  <div *ngIf="loading && displayTree.length === 0" class="loading">
+    <p>Loading users...</p>
+  </div>
+
+  <div *ngIf="displayTree.length === 0" class="empty-state">
+    <p>No tickets to preview. Please upload and map a CSV file first.</p>
+  </div>
+
+  <div *ngIf="displayTree.length > 0">
+    <p-treeTable [value]="displayTree" [scrollable]="true" scrollHeight="500px" [tableStyle]="{'min-width': '50rem', 'width': '100%'}" dataKey="tempId">
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 40%">Subject</th>
+          <th style="width: 20%">Level</th>
+          <th style="width: 15%">Estimated Hours</th>
+          <th style="width: 25%">Assignee</th>
+        </tr>
+      </ng-template>
+      
+      <ng-template pTemplate="body" let-rowNode>
+        <tr *ngIf="rowNode && rowNode.node" 
+            [class.invalid-row]="!rowNode.node.isValid || (!rowNode.node.data.assignee_id && rowNode.node.tempId && !rowNode.node.tempId.startsWith('story-'))">
+          <td>
+            <span [style.padding-left.px]="getIndent(rowNode.node)">{{ rowNode.node.data.subject }}</span>
+          </td>
+          <td>
+            <span class="level-badge" [class]="'level-' + rowNode.node.level.toLowerCase()">
+              {{ rowNode.node.level }}
+            </span>
+          </td>
+          <td>
+            <input 
+              type="number" 
+              [value]="rowNode.node.data.estimated_hours"
+              (input)="onEstimateChange(rowNode.node, $any($event.target).value)"
+              min="0"
+              step="0.5"
+              class="estimate-input"
+              [class.invalid]="!isValidEstimate(rowNode.node.data.estimated_hours)">
+          </td>
+          <td>
+            <p-dropdown
+              *ngIf="users.length > 0"
+              [options]="users"
+              [ngModel]="rowNode.node.data.assignee_id"
+              (ngModelChange)="onAssigneeChange(rowNode.node, $event)"
+              optionLabel="name"
+              optionValue="id"
+              [showClear]="true"
+              placeholder="Select Assignee"
+              [appendTo]="'body'"
+              [autoZIndex]="true"
+              [baseZIndex]="10000"
+              [class.invalid]="!rowNode.node.data.assignee_id && rowNode.node.tempId && !rowNode.node.tempId.startsWith('story-')"
+              styleClass="assignee-dropdown">
+            </p-dropdown>
+            <span *ngIf="users.length === 0" class="no-users-message">
+              No users available
+            </span>
+            <span *ngIf="!rowNode.node.data.assignee_id && rowNode.node.data.original_assignee_name" 
+                  class="original-name">
+              ({{ rowNode.node.data.original_assignee_name }} - not matched)
+            </span>
+          </td>
+        </tr>
+      </ng-template>
+    </p-treeTable>
+
+    <div *ngIf="hasInvalidNodes()" class="validation-warning">
+      <p><strong>Warning:</strong> Some tickets have invalid data or missing assignees. Please fix them before creating tickets.</p>
+    </div>
+  </div>
+</div>

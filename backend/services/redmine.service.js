@@ -165,6 +165,166 @@ const getUserById = async (userId) => {
   return response.data.user;
 };
 
+/**
+ * Get all users from Redmine (for dropdown population)
+ * @returns {Promise<Array<{id: number, name: string}>>}
+ */
+const getAllUsers = async () => {
+  const users = [];
+  const baseUrl = REDMINE_HOST.replace('/projects.json', '');
+  let offset = 0;
+  const limit = 100;
+  
+  try {
+    while (true) {
+      const url = `${baseUrl}/users.json?limit=${limit}&offset=${offset}`;
+      const response = await axios.get(url, {
+        headers: { 'X-Redmine-API-Key': REDMINE_API_KEY },
+      });
+      
+      const batch = response.data.users || [];
+      if (batch.length === 0) break;
+      
+      users.push(...batch.map(user => ({
+        id: user.id,
+        name: user.firstname && user.lastname 
+          ? `${user.firstname} ${user.lastname}`.trim()
+          : user.login || `User ${user.id}`
+      })));
+      
+      if (batch.length < limit) break;
+      offset += limit;
+    }
+  } catch (error) {
+    console.warn('Failed to get all users:', error.message);
+  }
+  
+  return users;
+};
+
+/**
+ * Get all trackers from Redmine
+ * @returns {Promise<Array<{id: number, name: string}>>}
+ */
+const getTrackers = async () => {
+  try {
+    const url = `${REDMINE_HOST.replace('/projects.json', '')}/trackers.json`;
+    const response = await axios.get(url, {
+      headers: { 'X-Redmine-API-Key': REDMINE_API_KEY },
+    });
+    return response.data.trackers || [];
+  } catch (error) {
+    console.warn('Failed to get trackers:', error.message);
+    return [];
+  }
+};
+
+/**
+ * Get all issue statuses from Redmine
+ * @returns {Promise<Array<{id: number, name: string}>>}
+ */
+const getStatuses = async () => {
+  try {
+    const url = `${REDMINE_HOST.replace('/projects.json', '')}/issue_statuses.json`;
+    const response = await axios.get(url, {
+      headers: { 'X-Redmine-API-Key': REDMINE_API_KEY },
+    });
+    return response.data.issue_statuses || [];
+  } catch (error) {
+    console.warn('Failed to get statuses:', error.message);
+    return [];
+  }
+};
+
+/**
+ * Create an issue in Redmine
+ * @param {Object} issueData - Issue data
+ * @param {string} issueData.subject - Issue subject
+ * @param {number} issueData.project_id - Project ID
+ * @param {number} [issueData.tracker_id] - Tracker ID
+ * @param {number} [issueData.status_id] - Status ID
+ * @param {number} [issueData.assigned_to_id] - Assignee user ID
+ * @param {number} [issueData.estimated_hours] - Estimated hours
+ * @param {string} [issueData.description] - Description
+ * @param {number} [issueData.parent_issue_id] - Parent issue ID
+ * @returns {Promise<Object>} Created issue
+ */
+const createIssue = async (issueData) => {
+  const url = `${REDMINE_HOST.replace('/projects.json', '')}/issues.json`;
+  const response = await axios.post(url, {
+    issue: issueData
+  }, {
+    headers: {
+      'X-Redmine-API-Key': REDMINE_API_KEY,
+      'Content-Type': 'application/json'
+    }
+  });
+  return response.data.issue;
+};
+
+/**
+ * Delete an issue from Redmine
+ * @param {number} issueId - Issue ID to delete
+ * @returns {Promise<void>}
+ */
+const deleteIssue = async (issueId) => {
+  const url = `${REDMINE_HOST.replace('/projects.json', '')}/issues/${issueId}.json`;
+  await axios.delete(url, {
+    headers: { 'X-Redmine-API-Key': REDMINE_API_KEY }
+  });
+};
+
+/**
+ * Get user stories (issues with Story tracker) for a project
+ * @param {number} projectId - Project ID
+ * @returns {Promise<Array<{id: number, subject: string}>>}
+ */
+const getUserStories = async (projectId) => {
+  try {
+    const baseUrl = REDMINE_HOST.replace('/projects.json', '');
+    const stories = [];
+    let offset = 0;
+    const limit = 100;
+    
+    // Get trackers first to find Story tracker ID
+    const trackers = await getTrackers();
+    const storyTracker = trackers.find(t => 
+      ['Story', 'User Story', 'Epic'].some(name => 
+        t.name.toLowerCase().includes(name.toLowerCase())
+      )
+    );
+    
+    if (!storyTracker) {
+      console.warn('No Story tracker found');
+      return [];
+    }
+    
+    while (true) {
+      const url = `${baseUrl}/issues.json?project_id=${projectId}&tracker_id=${storyTracker.id}&status_id=*&limit=${limit}&offset=${offset}`;
+      const response = await axios.get(url, {
+        headers: { 'X-Redmine-API-Key': REDMINE_API_KEY },
+      });
+      
+      const batch = response.data.issues || [];
+      if (batch.length === 0) break;
+      
+      stories.push(...batch.map(issue => ({
+        id: issue.id,
+        subject: issue.subject,
+        tracker_id: issue.tracker.id
+      })));
+      
+      if (batch.length < limit) break;
+      offset += limit;
+    }
+    
+    return stories;
+  } catch (error) {
+    console.warn('Failed to get user stories:', error.message);
+    return [];
+  }
+};
+
 module.exports = {
   getProjects,
   getProjectByName,
@@ -174,6 +334,12 @@ module.exports = {
   getTimeEntriesForExport,
   getOpenIssues,
   getProjectMembers,
-  getUserById
+  getUserById,
+  getAllUsers,
+  getTrackers,
+  getStatuses,
+  createIssue,
+  deleteIssue,
+  getUserStories
 };
 

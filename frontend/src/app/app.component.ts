@@ -30,6 +30,22 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnInit() {
     this.fetchProjects();
+    // Initialize tab based on current route
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe((event: any) => {
+      const url = event.urlAfterRedirects;
+      if (url.includes('/bulk-ticket-creator')) {
+        this.tabIndex = 2;
+        this.activeTab = 'bulk-ticket-creator';
+      } else if (url.includes('/productivity')) {
+        this.tabIndex = 1;
+        this.activeTab = 'productivity';
+      } else {
+        this.tabIndex = 0;
+        this.activeTab = 'projects';
+      }
+    });
     
     // Set initial tab based on current route
     this.updateTabFromRoute();
@@ -60,14 +76,18 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     
     // Use setTimeout to ensure DOM is ready
     setTimeout(() => {
-      if (currentUrl.includes('/productivity')) {
+      if (currentUrl.includes('/bulk-ticket-creator')) {
+        this.tabIndex = 2;
+        this.activeTab = 'bulk-ticket-creator';
+        console.log('Set tab to bulk-ticket-creator, tabIndex:', this.tabIndex);
+      } else if (currentUrl.includes('/productivity')) {
         this.tabIndex = 1;
         this.activeTab = 'productivity';
-        console.log('Set tab to productivity, tabIndex:', this.tabIndex); // Debug log
+        console.log('Set tab to productivity, tabIndex:', this.tabIndex);
       } else {
         this.tabIndex = 0;
         this.activeTab = 'projects';
-        console.log('Set tab to projects, tabIndex:', this.tabIndex); // Debug log
+        console.log('Set tab to projects, tabIndex:', this.tabIndex);
       }
     }, 0);
   }
@@ -84,6 +104,10 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
         this.router.navigate(['/productivity']);
         this.tabIndex = 1;
         break;
+      case 'bulk-ticket-creator':
+        this.router.navigate(['/bulk-ticket-creator']);
+        this.tabIndex = 2;
+        break;
     }
   }
 
@@ -97,6 +121,10 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       case 1:
         this.router.navigate(['/productivity']);
         this.activeTab = 'productivity';
+        break;
+      case 2:
+        this.router.navigate(['/bulk-ticket-creator']);
+        this.activeTab = 'bulk-ticket-creator';
         break;
     }
   }

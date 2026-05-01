@@ -27,7 +27,7 @@ export class ProductivityTabComponent implements OnInit, OnDestroy {
     { value: 'this_month', label: 'This Month' },
     { value: 'last_month', label: 'Last Month' }
   ];
-  displayedColumns: string[] = ['ticket', 'subject', 'calculated_time', 'time_spent', 'remaining_time', 'time_log_dates', 'productivity', 'link'];
+  displayedColumns: string[] = ['ticket', 'subject', 'time_spent', 'calculated_time', 'productivity', 'remaining_time', 'time_log_dates', 'link'];
   
   // New properties for user and project selection
   allUsers: any[] = []; // All users from API

@@ -34,7 +34,7 @@ const generateProductivityCSV = (allUsersData, fromDate, toDate) => {
   csvContent += `\n`;
   
   // Column headers
-  csvContent += `User,Issue,Calculated Time (h),Time Spent (h),Productivity (%),Remaining Time (h)\n`;
+  csvContent += `User,Issue,Time Spent (h),Calculated Time (h),Productivity (%),Remaining Time (h)\n`;
   
   // User tickets with empty row between users
   allUsersData.forEach((userData, userIndex) => {
@@ -42,8 +42,8 @@ const generateProductivityCSV = (allUsersData, fromDate, toDate) => {
       const issueLabel = `${ticket.status} #${ticket.ticket}: ${ticket.subject}`;
       csvContent += `${escapeCsvValue(userData.userName)},`;
       csvContent += `${escapeCsvValue(issueLabel)},`;
-      csvContent += `${ticket.calculated_time?.toFixed(2) || '0'},`;
       csvContent += `${ticket.time_spent?.toFixed(2) || '0'},`;
+      csvContent += `${ticket.calculated_time?.toFixed(2) || '0'},`;
       csvContent += `${ticket.productivity !== null ? ticket.productivity : '0'},`;
       csvContent += `${ticket.remaining_time !== null ? ticket.remaining_time.toFixed(2) : '0'}\n`;
     });
@@ -62,23 +62,23 @@ const generateProductivityCSV = (allUsersData, fromDate, toDate) => {
   // Overall summary with individual user breakdown
   csvContent += `OVERALL SUMMARY (All Selected Users)\n`;
   csvContent += `\n`;
-  csvContent += `User Name,Calculated Time (h),Time Spent (h),Productivity (%)\n`;
+  csvContent += `User Name,Time Spent (h),Calculated Time (h),Productivity (%)\n`;
   
   // Add each user's summary
   allUsersData.forEach(userData => {
     csvContent += `${escapeCsvValue(userData.userName)},`;
-    csvContent += `${userData.totalCalculatedTime.toFixed(2)},`;
     csvContent += `${userData.totalTimeSpent.toFixed(2)},`;
+    csvContent += `${userData.totalCalculatedTime.toFixed(2)},`;
     csvContent += `${userData.avgProductivity.toFixed(2)}\n`;
   });
   
   // Grand totals
   csvContent += `\n`;
   csvContent += `GRAND TOTALS\n`;
-  csvContent += `Total Users,Total Calculated Time (h),Total Time Spent (h),Average Productivity (%)\n`;
+  csvContent += `Total Users,Total Time Spent (h),Total Calculated Time (h),Average Productivity (%)\n`;
   csvContent += `${allUsersData.length},`;
-  csvContent += `${grandTotalCalculatedTime.toFixed(2)},`;
   csvContent += `${grandTotalTimeSpent.toFixed(2)},`;
+  csvContent += `${grandTotalCalculatedTime.toFixed(2)},`;
   csvContent += `${grandAvgProductivity.toFixed(2)}\n`;
   
   return csvContent;

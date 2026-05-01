@@ -3,6 +3,48 @@
 ## Overview
 This document explains how productivity, calculated time, opening estimate, and remaining time are computed in the Redmine MCP Dashboard.
 
+## Current Monthly Resolution Rules
+
+### Resolved Status Definition
+A ticket is considered resolved for a monthly report when its status at month end is not `1` (New) or `2` (In Progress), or when its journal history shows a status change to any ID other than `1` or `2` before the month-end timestamp.
+
+The report reads Redmine journal entries from either native `journals[].details[]` records where `name` is `status_id`, or normalized `journals[].updates[]` records where `property` is `status` / `status_id`.
+
+### Resolved Bonus
+If a ticket reaches resolution in the reporting month, the calculated time is the full estimated-hours credit, not the actual hours spent.
+
+**Formula**:  
+**Productivity = (Estimated Hours Credit / Time Spent) × 100%**
+
+For carried-over tickets, the resolved credit is capped to the selected period's **Opening Estimate** instead of the original full estimate.
+
+**Example**:
+- Estimate: 10h
+- Time spent: 5h
+- Productivity: 10 / 5 × 100 = 200%
+
+**Carried-over example**:
+- Original estimate: 4h
+- Opening estimate this month: 3h
+- Time spent this month: 3h
+- Productivity: 3 / 3 × 100 = 100%
+
+### Multi-User Distribution
+When multiple users log time on a resolved ticket in the reporting month, the estimated-hours credit is distributed by each user's share of the total time logged in that month. For carried-over tickets, this uses the opening estimate as the credit pool.
+
+**Formula**:  
+**User Credit = (User Spent Hours / Total Spent Hours) × Total Estimated Hours**
+
+### Previously Resolved Tickets
+If a ticket was already resolved at the end of the previous month, the current month's opening estimate is `0h`.
+
+Any additional hours logged against a previously resolved ticket produce `0%` productivity for the current month.
+
+### Subject Labels
+- `[Resolved]`: ticket reached resolution in the selected month.
+- `[Prev. Resolved]`: ticket was already resolved before the selected month, but has current-month logged work.
+- `[Carried Over]`: ticket has hours logged before the selected period.
+
 ## Key Concepts
 
 ### 1. Calculated Time
@@ -30,6 +72,8 @@ This shows how efficiently the user worked compared to what should have been don
 **Opening Estimate = max(0, Original Estimated Hours - Hours Logged Before Period Start)**
 
 This is the "Prorated Carry-over" baseline used to avoid counting previous months' work as available effort in the current month.
+
+For carried-over tickets, calculated time is capped by the opening estimate before productivity is calculated.
 
 ### 6. Carried Over Ticket Marker
 If a ticket has any hours logged before the selected period, it is flagged as carry-over.
@@ -166,6 +210,8 @@ If a ticket has any hours logged before the selected period, it is flagged as ca
 - Opening estimate (this month): 5h
 - Logged in this month: 2h
 - Remaining (this month): 3h
+
+If calculated time would otherwise exceed the opening estimate, the report uses the opening estimate as the cap.
 
 ---
 

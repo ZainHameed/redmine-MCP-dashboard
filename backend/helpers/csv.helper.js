@@ -17,6 +17,24 @@ const escapeCsvValue = (value) => {
   return str;
 };
 
+const applyOpeningEstimateCap = (ticket) => {
+  if (ticket.opening_estimate === null || ticket.opening_estimate === undefined) {
+    return ticket;
+  }
+
+  const timeSpent = Number(ticket.time_spent || 0);
+  const cappedCalculatedTime = Math.min(
+    Number(ticket.calculated_time || 0),
+    Number(ticket.opening_estimate)
+  );
+
+  return {
+    ...ticket,
+    calculated_time: cappedCalculatedTime,
+    productivity: timeSpent > 0 ? Math.round((cappedCalculatedTime / timeSpent) * 100) : null,
+  };
+};
+
 /**
  * Generate CSV content from productivity data
  * @param {Array} allUsersData - Array of user data objects
@@ -38,10 +56,12 @@ const generateProductivityCSV = (allUsersData, fromDate, toDate) => {
   
   // User tickets with empty row between users
   allUsersData.forEach((userData, userIndex) => {
-    userData.tickets.forEach(ticket => {
+    userData.tickets.forEach(rawTicket => {
+      const ticket = applyOpeningEstimateCap(rawTicket);
       const trackerName = ticket.tracker || 'Unknown';
       const carrySuffix = ticket.carried_over ? ' [Carried Over]' : '';
-      const issueLabel = `[${trackerName}] #${ticket.ticket}: ${ticket.subject}${carrySuffix}`;
+      const resolutionSuffix = ticket.resolution_label ? ` [${ticket.resolution_label}]` : '';
+      const issueLabel = `[${trackerName}] #${ticket.ticket}: ${ticket.subject}${carrySuffix}${resolutionSuffix}`;
       const openingStr =
         ticket.opening_estimate !== null && ticket.opening_estimate !== undefined
           ? Number(ticket.opening_estimate).toFixed(2)

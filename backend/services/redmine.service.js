@@ -34,7 +34,7 @@ const getProjectByName = async (name) => {
  * Get issue details by ID
  */
 const getIssueById = async (issueId) => {
-  const url = `${REDMINE_HOST.replace('/projects.json', '')}/issues/${issueId}.json`;
+  const url = `${REDMINE_HOST.replace('/projects.json', '')}/issues/${issueId}.json?include=journals`;
   const response = await axios.get(url, {
     headers: { 'X-Redmine-API-Key': REDMINE_API_KEY },
   });

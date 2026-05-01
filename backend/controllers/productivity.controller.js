@@ -28,6 +28,24 @@ const passesPanavidTargetVersionFilter = (issue, fixedVersionIds) => {
   return fixedVersionIds.includes(Number(fvId));
 };
 
+const applyOpeningEstimateCap = (productivityData, timeSpent) => {
+  const openingEstimate = productivityData.opening_estimate;
+  if (openingEstimate === null || openingEstimate === undefined) {
+    return productivityData;
+  }
+
+  const cappedCalculatedTime = Math.min(
+    Number(productivityData.calculated_time || 0),
+    Number(openingEstimate)
+  );
+
+  return {
+    ...productivityData,
+    calculated_time: cappedCalculatedTime,
+    productivity: timeSpent > 0 ? Math.round((cappedCalculatedTime / timeSpent) * 100) : null,
+  };
+};
+
 /**
  * Open target versions for a whitelisted project (used by productivity UI)
  */
@@ -133,7 +151,10 @@ const getProductivity = async (req, res) => {
           })).sort((a, b) => new Date(a.date) - new Date(b.date));
           
           // Calculate productivity, calculated time, and remaining time
-          const result = await productivityService.calculateProductivity(fullIssue, totalTimeSpent, user_id, issueData.timeEntries, from_date, to_date);
+          const result = applyOpeningEstimateCap(
+            await productivityService.calculateProductivity(fullIssue, totalTimeSpent, user_id, issueData.timeEntries, from_date, to_date),
+            totalTimeSpent
+          );
           
           const timeLogDates = timeLogDetails.map(detail => detail.date);
           const firstTimeLog = timeLogDates[0];
@@ -147,6 +168,7 @@ const getProductivity = async (req, res) => {
             productivity: result.productivity,
             remaining_time: result.remaining_time,
             carried_over: result.carried_over,
+            resolution_label: result.resolution_label,
             opening_estimate: result.opening_estimate,
             hours_logged_before_period: result.hours_logged_before_period,
             created_on: fullIssue.created_on,
@@ -244,17 +266,19 @@ const exportProductivity = async (req, res) => {
             from_date,
             to_date
           );
+          const cappedProductivityData = applyOpeningEstimateCap(productivityData, userTimeSpent);
           
           userTickets.push({
             ticket: issue.id,
             subject: issue.subject,
-            calculated_time: productivityData.calculated_time,
+            calculated_time: cappedProductivityData.calculated_time,
             time_spent: userTimeSpent,
-            productivity: productivityData.productivity,
-            remaining_time: productivityData.remaining_time,
-            carried_over: productivityData.carried_over,
-            opening_estimate: productivityData.opening_estimate,
-            hours_logged_before_period: productivityData.hours_logged_before_period,
+            productivity: cappedProductivityData.productivity,
+            remaining_time: cappedProductivityData.remaining_time,
+            carried_over: cappedProductivityData.carried_over,
+            resolution_label: cappedProductivityData.resolution_label,
+            opening_estimate: cappedProductivityData.opening_estimate,
+            hours_logged_before_period: cappedProductivityData.hours_logged_before_period,
             tracker: issue.tracker?.name || '',
             status: issue.status?.name || '',
             project_name: issue.project?.name || '',

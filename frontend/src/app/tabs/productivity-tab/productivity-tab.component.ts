@@ -57,6 +57,24 @@ export class ProductivityTabComponent implements OnInit, OnDestroy {
 
   constructor(private redmine: RedmineService) {}
 
+  private applyOpeningEstimateCap(item: any): any {
+    const openingEstimate = item.opening_estimate;
+    const timeSpent = Number(item.time_spent || 0);
+    const calculatedTime = Number(item.calculated_time || 0);
+
+    if (openingEstimate === null || openingEstimate === undefined) {
+      return item;
+    }
+
+    const cappedCalculatedTime = Math.min(calculatedTime, Number(openingEstimate));
+
+    return {
+      ...item,
+      calculated_time: cappedCalculatedTime,
+      productivity: timeSpent > 0 ? Math.round((cappedCalculatedTime / timeSpent) * 100) : null
+    };
+  }
+
   ngOnInit() {
     // Initialize with all whitelisted projects selected
     this.selectedProjects = this.whitelistedProjects.map(p => p.id);
@@ -112,10 +130,13 @@ export class ProductivityTabComponent implements OnInit, OnDestroy {
       next: (data) => {
         const { from, to } = this.getDateRange(this.range);
         
-        this.productivityTickets = data.map(item => ({
+        this.productivityTickets = data.map(rawItem => {
+          const item = this.applyOpeningEstimateCap(rawItem);
+          return {
           ticket: item.ticket,
           subject: item.subject,
           carried_over: !!item.carried_over,
+          resolution_label: item.resolution_label,
           opening_estimate: item.opening_estimate,
           hours_logged_before_period: item.hours_logged_before_period ?? 0,
           calculated_time: item.calculated_time !== undefined ? item.calculated_time : 0,
@@ -132,7 +153,8 @@ export class ProductivityTabComponent implements OnInit, OnDestroy {
           time_log_details: item.time_log_details || [],
           first_time_log: item.first_time_log,
           last_time_log: item.last_time_log
-        }));
+          };
+        });
         this.calculateProductivitySummary();
         this.loading = false;
       },

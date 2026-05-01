@@ -1,8 +1,8 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Subject, Observable } from 'rxjs';
+import { Subject } from 'rxjs';
 import { takeUntil, switchMap, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { RedmineService } from '../../redmine.service';
-import { WHITELISTED_PROJECTS } from '../../core/constants/projects.constants';
+import { WHITELISTED_PROJECTS, PANAVID_PROJECT_ID } from '../../core/constants/projects.constants';
 import { getIssueUrl, getTimeEntriesUrl } from '../../core/constants/redmine.constants';
 
 @Component({
@@ -36,11 +36,23 @@ export class ProductivityTabComponent implements OnInit, OnDestroy {
   selectedUsers: any[] = []; // For multi-select export
   selectedProjects: number[] = [];
   whitelistedProjects = WHITELISTED_PROJECTS;
+  readonly panavidProjectId = PANAVID_PROJECT_ID;
   exportLoading = false;
+
+  /** Open target versions for Panavid (API returns status open only) */
+  openTargetVersions: { id: number; name: string }[] = [];
+  versionsLoading = false;
+  selectedFixedVersionIds: number[] = [];
 
   // Request cancellation properties
   private destroy$ = new Subject<void>();
-  private productivityRequest$ = new Subject<{userId: number, projectIds: number[], fromDate?: string, toDate?: string}>();
+  private productivityRequest$ = new Subject<{
+    userId: number;
+    projectIds: number[];
+    fromDate?: string;
+    toDate?: string;
+    fixedVersionIds?: number[];
+  }>();
   private usersRequest$ = new Subject<void>();
 
   constructor(private redmine: RedmineService) {}
@@ -70,6 +82,8 @@ export class ProductivityTabComponent implements OnInit, OnDestroy {
     
     // Trigger initial users load
     this.usersRequest$.next();
+
+    this.refreshPanavidVersionsIfNeeded();
     
     // Set up request cancellation for productivity data
     this.productivityRequest$.pipe(
@@ -78,12 +92,20 @@ export class ProductivityTabComponent implements OnInit, OnDestroy {
         prev.userId === curr.userId && 
         JSON.stringify(prev.projectIds) === JSON.stringify(curr.projectIds) &&
         prev.fromDate === curr.fromDate && 
-        prev.toDate === curr.toDate
+        prev.toDate === curr.toDate &&
+        JSON.stringify([...(prev.fixedVersionIds ?? [])].sort()) ===
+          JSON.stringify([...(curr.fixedVersionIds ?? [])].sort())
       ),
       switchMap(params => {
         this.loading = true;
         this.error = '';
-        return this.redmine.getProductivity(params.userId, params.projectIds, params.fromDate, params.toDate);
+        return this.redmine.getProductivity(
+          params.userId,
+          params.projectIds,
+          params.fromDate,
+          params.toDate,
+          params.fixedVersionIds
+        );
       }),
       takeUntil(this.destroy$)
     ).subscribe({
@@ -116,6 +138,36 @@ export class ProductivityTabComponent implements OnInit, OnDestroy {
         this.loading = false;
       }
     });
+  }
+
+  get panavidVersionFilterVisible(): boolean {
+    return this.selectedProjects.includes(this.panavidProjectId);
+  }
+
+  refreshPanavidVersionsIfNeeded(): void {
+    if (!this.selectedProjects.includes(PANAVID_PROJECT_ID)) {
+      this.openTargetVersions = [];
+      this.selectedFixedVersionIds = [];
+      return;
+    }
+    this.versionsLoading = true;
+    this.redmine.getOpenTargetVersions(PANAVID_PROJECT_ID).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (versions) => {
+        this.openTargetVersions = versions;
+        this.selectedFixedVersionIds = this.selectedFixedVersionIds.filter((id) =>
+          versions.some((v) => v.id === id)
+        );
+        this.versionsLoading = false;
+      },
+      error: () => {
+        this.openTargetVersions = [];
+        this.versionsLoading = false;
+      }
+    });
+  }
+
+  onFixedVersionsChange(): void {
+    this.fetchProductivity();
   }
 
   ngOnDestroy() {
@@ -198,12 +250,18 @@ export class ProductivityTabComponent implements OnInit, OnDestroy {
     // Get date range for filtering
     const { from, to } = this.getDateRange(this.range);
     
+    const fixedVersionIds =
+      this.selectedProjects.includes(PANAVID_PROJECT_ID) && this.selectedFixedVersionIds.length > 0
+        ? [...this.selectedFixedVersionIds]
+        : undefined;
+
     // Trigger the request through the subject (this will cancel any pending requests)
     this.productivityRequest$.next({
       userId: this.selectedUser.id,
       projectIds: this.selectedProjects,
       fromDate: from,
-      toDate: to
+      toDate: to,
+      fixedVersionIds
     });
   }
 
@@ -217,6 +275,7 @@ export class ProductivityTabComponent implements OnInit, OnDestroy {
     if (!this.selectedUser && this.filteredUsers.length > 0) {
       this.selectedUser = this.filteredUsers[0];
     }
+    this.refreshPanavidVersionsIfNeeded();
     this.fetchProductivity();
   }
 
@@ -288,6 +347,13 @@ export class ProductivityTabComponent implements OnInit, OnDestroy {
     
     if (from && to) {
       url += `&from_date=${from}&to_date=${to}`;
+    }
+
+    if (
+      this.selectedProjects.includes(PANAVID_PROJECT_ID) &&
+      this.selectedFixedVersionIds.length > 0
+    ) {
+      url += `&fixed_version_ids=${this.selectedFixedVersionIds.join(',')}`;
     }
 
     // Use fetch to properly handle the download with loading state

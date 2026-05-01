@@ -23,7 +23,13 @@ export class RedmineService {
     return this.http.get<any[]>('/api/users');
   }
 
-  getProductivity(userId: number, projectIds: number[], fromDate?: string, toDate?: string): Observable<any[]> {
+  getProductivity(
+    userId: number,
+    projectIds: number[],
+    fromDate?: string,
+    toDate?: string,
+    fixedVersionIds?: number[]
+  ): Observable<any[]> {
     const params: any = {
       user_id: userId.toString(),
       project_ids: projectIds.join(',')
@@ -33,8 +39,18 @@ export class RedmineService {
       params.from_date = fromDate;
       params.to_date = toDate;
     }
+
+    if (fixedVersionIds && fixedVersionIds.length > 0) {
+      params.fixed_version_ids = fixedVersionIds.join(',');
+    }
     
     return this.http.get<any[]>(`/api/productivity`, { params });
+  }
+
+  getOpenTargetVersions(projectId: number): Observable<{ id: number; name: string }[]> {
+    return this.http.get<{ id: number; name: string }[]>(`/api/productivity/versions`, {
+      params: { project_id: projectId.toString() }
+    });
   }
 
   getTicketDetails(id: string): Observable<any> {

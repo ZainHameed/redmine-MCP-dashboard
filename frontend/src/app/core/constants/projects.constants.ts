@@ -6,6 +6,9 @@
  * included in productivity calculations and user filtering.
  */
 
+/** Panavid Fixed Cost Projects — target-version filter applies only to this project */
+export const PANAVID_PROJECT_ID = 944;
+
 // Configure which projects to enable for productivity features
 export const WHITELISTED_PROJECTS = [
   {

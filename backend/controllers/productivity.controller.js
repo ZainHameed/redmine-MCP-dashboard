@@ -7,13 +7,62 @@ const redmineService = require('../services/redmine.service');
 const productivityService = require('../services/productivity.service');
 const csvHelper = require('../helpers/csv.helper');
 const { getWhitelistedProjectIds, WHITELISTED_PROJECTS } = require('../config/projects');
+const { PANAVID_PROJECT_ID } = require('../config/constants');
+
+const parseFixedVersionIds = (raw) => {
+  if (raw === undefined || raw === null || String(raw).trim() === '') return [];
+  const parts = String(raw).split(',');
+  return parts.map((id) => parseInt(id.trim(), 10)).filter((id) => !isNaN(id));
+};
+
+/**
+ * When fixedVersionIds is non-empty, Panavid issues must have fixed_version in that set.
+ * Issues without a target version are excluded. Non-Panavid issues pass through.
+ */
+const passesPanavidTargetVersionFilter = (issue, fixedVersionIds) => {
+  if (!fixedVersionIds.length) return true;
+  const issueProjectId = issue.project?.id ?? issue.project_id;
+  if (Number(issueProjectId) !== Number(PANAVID_PROJECT_ID)) return true;
+  const fvId = issue.fixed_version?.id ?? issue.fixed_version_id;
+  if (fvId == null || fvId === '') return false;
+  return fixedVersionIds.includes(Number(fvId));
+};
+
+/**
+ * Open target versions for a whitelisted project (used by productivity UI)
+ */
+const getOpenTargetVersions = async (req, res) => {
+  try {
+    const project_id = req.query.project_id;
+    if (!project_id) {
+      return res.status(400).json({ error: 'project_id is required' });
+    }
+    const pid = parseInt(project_id, 10);
+    if (isNaN(pid) || !getWhitelistedProjectIds().includes(pid)) {
+      return res.status(400).json({ error: 'Invalid or non-whitelisted project_id' });
+    }
+    if (pid !== PANAVID_PROJECT_ID) {
+      return res.status(400).json({ error: 'Target versions list is only available for Panavid Fixed Cost Projects' });
+    }
+
+    const allVersions = await redmineService.getProjectVersions(pid);
+    const openVersions = allVersions
+      .filter((v) => String(v.status).toLowerCase() === 'open')
+      .map(({ id, name }) => ({ id, name }));
+
+    res.json(openVersions);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
 /**
  * Get productivity data for a user across selected projects
  */
 const getProductivity = async (req, res) => {
   try {
-    const { user_id, project_ids, from_date, to_date } = req.query;
+    const { user_id, project_ids, from_date, to_date, fixed_version_ids } = req.query;
+    const fixedVersionIds = parseFixedVersionIds(fixed_version_ids);
     
     console.log('Productivity API called with:', { user_id, project_ids, from_date, to_date });
     
@@ -72,6 +121,10 @@ const getProductivity = async (req, res) => {
             console.warn(`Failed to get full details for issue ${issueId}:`, issueError.message);
             // Use the basic issue info from time entry
           }
+
+          if (!passesPanavidTargetVersionFilter(fullIssue, fixedVersionIds)) {
+            continue;
+          }
           
           // Extract time logging dates from time entries with hours
           const timeLogDetails = issueData.timeEntries.map(entry => ({
@@ -120,7 +173,8 @@ const getProductivity = async (req, res) => {
  */
 const exportProductivity = async (req, res) => {
   try {
-    const { user_ids, project_ids, from_date, to_date } = req.query;
+    const { user_ids, project_ids, from_date, to_date, fixed_version_ids } = req.query;
+    const fixedVersionIds = parseFixedVersionIds(fixed_version_ids);
     
     if (!user_ids) {
       return res.status(400).json({ error: 'user_ids parameter is required (comma-separated)' });
@@ -168,6 +222,9 @@ const exportProductivity = async (req, res) => {
       for (const [issueId, entries] of Object.entries(issueGroups)) {
         try {
           const issue = await redmineService.getIssueById(issueId);
+          if (!passesPanavidTargetVersionFilter(issue, fixedVersionIds)) {
+            continue;
+          }
           const userTimeSpent = entries.reduce((sum, entry) => sum + (entry.hours || 0), 0);
           
           const timeLogDetails = entries.map(entry => ({
@@ -231,6 +288,7 @@ const exportProductivity = async (req, res) => {
 };
 
 module.exports = {
+  getOpenTargetVersions,
   getProductivity,
   exportProductivity
 };

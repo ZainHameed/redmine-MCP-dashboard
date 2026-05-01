@@ -275,6 +275,42 @@ const deleteIssue = async (issueId) => {
 };
 
 /**
+ * Get versions (target versions / milestones) for a project
+ * @param {number} projectId - Project ID
+ * @returns {Promise<Array<{id: number, name: string, status: string}>>}
+ */
+const getProjectVersions = async (projectId) => {
+  const baseUrl = REDMINE_HOST.replace('/projects.json', '');
+  const versions = [];
+  let offset = 0;
+  const limit = 100;
+
+  try {
+    while (true) {
+      const url = `${baseUrl}/projects/${projectId}/versions.json?limit=${limit}&offset=${offset}`;
+      const response = await axios.get(url, {
+        headers: { 'X-Redmine-API-Key': REDMINE_API_KEY },
+      });
+      const batch = response.data.versions || [];
+      if (batch.length === 0) break;
+      versions.push(
+        ...batch.map((v) => ({
+          id: v.id,
+          name: v.name,
+          status: v.status,
+        }))
+      );
+      if (batch.length < limit) break;
+      offset += limit;
+    }
+  } catch (error) {
+    console.warn(`Failed to get versions for project ${projectId}:`, error.message);
+  }
+
+  return versions;
+};
+
+/**
  * Get user stories (issues with Story tracker) for a project
  * @param {number} projectId - Project ID
  * @returns {Promise<Array<{id: number, subject: string}>>}
@@ -340,6 +376,7 @@ module.exports = {
   getStatuses,
   createIssue,
   deleteIssue,
+  getProjectVersions,
   getUserStories
 };
 

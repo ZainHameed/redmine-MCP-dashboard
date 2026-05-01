@@ -31,6 +31,21 @@
           </mat-option>
         </mat-select>
       </mat-form-field>
+
+      <mat-form-field *ngIf="panavidVersionFilterVisible" appearance="fill" style="min-width: 280px;">
+        <mat-label>Target versions (Panavid)</mat-label>
+        <mat-select
+          [(ngModel)]="selectedFixedVersionIds"
+          name="panavidVersions"
+          multiple
+          [disabled]="versionsLoading || openTargetVersions.length === 0"
+          (selectionChange)="onFixedVersionsChange()">
+          <mat-option *ngIf="versionsLoading" disabled>Loading versions…</mat-option>
+          <mat-option *ngIf="!versionsLoading && openTargetVersions.length === 0" disabled>No open versions</mat-option>
+          <mat-option *ngFor="let v of openTargetVersions" [value]="v.id">{{ v.name }}</mat-option>
+        </mat-select>
+        <mat-hint>Optional — leave empty for all tickets. When set, Panavid tickets must match a selected version (no version = excluded).</mat-hint>
+      </mat-form-field>
       
       <mat-form-field appearance="fill" style="min-width: 200px;">
         <mat-label>Date Range</mat-label>

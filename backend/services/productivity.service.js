@@ -162,21 +162,22 @@ function getEntriesInPeriod(entries, fromDate, toDate) {
 }
 
 function finalizeProductivityResult(result, userTimeSpent, carryMetrics, resolutionState) {
-  let finalCalculatedTime = Number(result.calculated_time || 0);
+  const finalCalculatedTime = Number(result.calculated_time || 0);
+  let productivityBasis = finalCalculatedTime;
 
   if (
     carryMetrics.opening_estimate !== null &&
     carryMetrics.opening_estimate !== undefined &&
-    finalCalculatedTime > Number(carryMetrics.opening_estimate)
+    productivityBasis > Number(carryMetrics.opening_estimate)
   ) {
-    finalCalculatedTime = Number(carryMetrics.opening_estimate);
+    productivityBasis = Number(carryMetrics.opening_estimate);
   }
 
   const finalProductivity =
     result.productivity === null || result.productivity === undefined
       ? result.productivity
       : userTimeSpent > 0
-        ? Math.round((finalCalculatedTime / userTimeSpent) * 100)
+        ? Math.round((productivityBasis / userTimeSpent) * 100)
         : null;
 
   return {

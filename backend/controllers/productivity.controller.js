@@ -41,7 +41,6 @@ const applyOpeningEstimateCap = (productivityData, timeSpent) => {
 
   return {
     ...productivityData,
-    calculated_time: cappedCalculatedTime,
     productivity: timeSpent > 0 ? Math.round((cappedCalculatedTime / timeSpent) * 100) : null,
   };
 };

@@ -70,7 +70,6 @@ export class ProductivityTabComponent implements OnInit, OnDestroy {
 
     return {
       ...item,
-      calculated_time: cappedCalculatedTime,
       productivity: timeSpent > 0 ? Math.round((cappedCalculatedTime / timeSpent) * 100) : null
     };
   }
@@ -342,11 +341,16 @@ export class ProductivityTabComponent implements OnInit, OnDestroy {
     // Calculate totals
     this.totalTimeSpent = this.productivityTickets.reduce((sum, ticket) => sum + (ticket.time_spent || 0), 0);
     const totalCalculatedTime = this.productivityTickets.reduce((sum, ticket) => sum + (ticket.calculated_time || 0), 0);
+    const totalProductivityBasis = this.productivityTickets.reduce((sum, ticket) => {
+      if (ticket.opening_estimate === null || ticket.opening_estimate === undefined) {
+        return sum + (ticket.calculated_time || 0);
+      }
+      return sum + Math.min(ticket.calculated_time || 0, Number(ticket.opening_estimate));
+    }, 0);
     this.totalEstimatedHours = totalCalculatedTime; // Store calculated time in totalEstimatedHours for display
     
-    // Calculate average productivity based on calculated_time / time_spent
-    // Formula: average = (sum of all calculated_time) / (sum of all time_spent) * 100
-    this.averageProductivity = this.totalTimeSpent > 0 ? (totalCalculatedTime / this.totalTimeSpent) * 100 : 0;
+    // Average productivity uses opening estimate as the cap for carried-over tickets.
+    this.averageProductivity = this.totalTimeSpent > 0 ? (totalProductivityBasis / this.totalTimeSpent) * 100 : 0;
     this.totalProductivity = 0; // Not used anymore
   }
 

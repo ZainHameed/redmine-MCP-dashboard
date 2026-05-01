@@ -30,7 +30,6 @@ const applyOpeningEstimateCap = (ticket) => {
 
   return {
     ...ticket,
-    calculated_time: cappedCalculatedTime,
     productivity: timeSpent > 0 ? Math.round((cappedCalculatedTime / timeSpent) * 100) : null,
   };
 };
@@ -44,6 +43,25 @@ const applyOpeningEstimateCap = (ticket) => {
  */
 const generateProductivityCSV = (allUsersData, fromDate, toDate) => {
   let csvContent = '';
+  const cappedUsersData = allUsersData.map((userData) => {
+    const tickets = userData.tickets.map(applyOpeningEstimateCap);
+    const totalCalculatedTime = tickets.reduce((sum, ticket) => sum + Number(ticket.calculated_time || 0), 0);
+    const totalProductivityBasis = tickets.reduce((sum, ticket) => {
+      if (ticket.opening_estimate === null || ticket.opening_estimate === undefined) {
+        return sum + Number(ticket.calculated_time || 0);
+      }
+      return sum + Math.min(Number(ticket.calculated_time || 0), Number(ticket.opening_estimate));
+    }, 0);
+    const totalTimeSpent = tickets.reduce((sum, ticket) => sum + Number(ticket.time_spent || 0), 0);
+    return {
+      ...userData,
+      tickets,
+      totalCalculatedTime,
+      totalProductivityBasis,
+      totalTimeSpent,
+      avgProductivity: totalTimeSpent > 0 ? (totalProductivityBasis / totalTimeSpent) * 100 : 0,
+    };
+  });
   
   // Header
   const dateRangeLabel = fromDate && toDate ? `${fromDate} to ${toDate}` : 'All Time';
@@ -55,9 +73,8 @@ const generateProductivityCSV = (allUsersData, fromDate, toDate) => {
   csvContent += `User,Issue,Opening Estimate (h),Hours Before Period (h),Time Spent (h),Calculated Time (h),Productivity (%),Remaining Time (h)\n`;
   
   // User tickets with empty row between users
-  allUsersData.forEach((userData, userIndex) => {
-    userData.tickets.forEach(rawTicket => {
-      const ticket = applyOpeningEstimateCap(rawTicket);
+  cappedUsersData.forEach((userData, userIndex) => {
+    userData.tickets.forEach(ticket => {
       const trackerName = ticket.tracker || 'Unknown';
       const carrySuffix = ticket.carried_over ? ' [Carried Over]' : '';
       const resolutionSuffix = ticket.resolution_label ? ` [${ticket.resolution_label}]` : '';
@@ -70,13 +87,23 @@ const generateProductivityCSV = (allUsersData, fromDate, toDate) => {
         ticket.hours_logged_before_period !== null && ticket.hours_logged_before_period !== undefined
           ? Number(ticket.hours_logged_before_period).toFixed(2)
           : '0';
+      const displayTimeSpent = Number(ticket.time_spent || 0);
+      const displayCalculatedTime = Number(ticket.calculated_time || 0);
+      const productivityBasis =
+        ticket.opening_estimate !== null && ticket.opening_estimate !== undefined
+          ? Math.min(displayCalculatedTime, Number(ticket.opening_estimate))
+          : displayCalculatedTime;
+      const displayProductivity =
+        displayTimeSpent > 0
+          ? Math.round((productivityBasis / displayTimeSpent) * 100)
+          : 0;
       csvContent += `${escapeCsvValue(userData.userName)},`;
       csvContent += `${escapeCsvValue(issueLabel)},`;
       csvContent += `${openingStr},`;
       csvContent += `${priorStr},`;
-      csvContent += `${ticket.time_spent?.toFixed(2) || '0'},`;
-      csvContent += `${ticket.calculated_time?.toFixed(2) || '0'},`;
-      csvContent += `${ticket.productivity !== null ? ticket.productivity : '0'},`;
+      csvContent += `${displayTimeSpent.toFixed(2)},`;
+      csvContent += `${displayCalculatedTime.toFixed(2)},`;
+      csvContent += `${displayProductivity},`;
       const remainingStr =
         ticket.remaining_time !== null && ticket.remaining_time !== undefined
           ? Number(ticket.remaining_time).toFixed(2)
@@ -85,15 +112,16 @@ const generateProductivityCSV = (allUsersData, fromDate, toDate) => {
     });
     
     // Add empty row after each user's tickets (except the last user)
-    if (userIndex < allUsersData.length - 1) {
+    if (userIndex < cappedUsersData.length - 1) {
       csvContent += `\n`;
     }
   });
   
   // Calculate grand totals
-  const grandTotalCalculatedTime = allUsersData.reduce((sum, u) => sum + u.totalCalculatedTime, 0);
-  const grandTotalTimeSpent = allUsersData.reduce((sum, u) => sum + u.totalTimeSpent, 0);
-  const grandAvgProductivity = grandTotalTimeSpent > 0 ? (grandTotalCalculatedTime / grandTotalTimeSpent) * 100 : 0;
+  const grandTotalCalculatedTime = cappedUsersData.reduce((sum, u) => sum + u.totalCalculatedTime, 0);
+  const grandTotalProductivityBasis = cappedUsersData.reduce((sum, u) => sum + u.totalProductivityBasis, 0);
+  const grandTotalTimeSpent = cappedUsersData.reduce((sum, u) => sum + u.totalTimeSpent, 0);
+  const grandAvgProductivity = grandTotalTimeSpent > 0 ? (grandTotalProductivityBasis / grandTotalTimeSpent) * 100 : 0;
   
   // Overall summary with individual user breakdown
   csvContent += `OVERALL SUMMARY (All Selected Users)\n`;
@@ -101,7 +129,7 @@ const generateProductivityCSV = (allUsersData, fromDate, toDate) => {
   csvContent += `User Name,Time Spent (h),Calculated Time (h),Productivity (%)\n`;
   
   // Add each user's summary
-  allUsersData.forEach(userData => {
+  cappedUsersData.forEach(userData => {
     csvContent += `${escapeCsvValue(userData.userName)},`;
     csvContent += `${userData.totalTimeSpent.toFixed(2)},`;
     csvContent += `${userData.totalCalculatedTime.toFixed(2)},`;
@@ -112,7 +140,7 @@ const generateProductivityCSV = (allUsersData, fromDate, toDate) => {
   csvContent += `\n`;
   csvContent += `GRAND TOTALS\n`;
   csvContent += `Total Users,Total Time Spent (h),Total Calculated Time (h),Average Productivity (%)\n`;
-  csvContent += `${allUsersData.length},`;
+  csvContent += `${cappedUsersData.length},`;
   csvContent += `${grandTotalTimeSpent.toFixed(2)},`;
   csvContent += `${grandTotalCalculatedTime.toFixed(2)},`;
   csvContent += `${grandAvgProductivity.toFixed(2)}\n`;

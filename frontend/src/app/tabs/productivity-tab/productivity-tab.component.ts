@@ -27,7 +27,7 @@ export class ProductivityTabComponent implements OnInit, OnDestroy {
     { value: 'this_month', label: 'This Month' },
     { value: 'last_month', label: 'Last Month' }
   ];
-  displayedColumns: string[] = ['ticket', 'subject', 'time_spent', 'calculated_time', 'productivity', 'remaining_time', 'time_log_dates', 'link'];
+  displayedColumns: string[] = ['ticket', 'subject', 'opening_estimate', 'time_spent', 'calculated_time', 'productivity', 'remaining_time', 'time_log_dates', 'link'];
   
   // New properties for user and project selection
   allUsers: any[] = []; // All users from API
@@ -115,6 +115,9 @@ export class ProductivityTabComponent implements OnInit, OnDestroy {
         this.productivityTickets = data.map(item => ({
           ticket: item.ticket,
           subject: item.subject,
+          carried_over: !!item.carried_over,
+          opening_estimate: item.opening_estimate,
+          hours_logged_before_period: item.hours_logged_before_period ?? 0,
           calculated_time: item.calculated_time !== undefined ? item.calculated_time : 0,
           time_spent: item.time_spent,
           productivity: item.productivity,

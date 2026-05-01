@@ -1,7 +1,7 @@
 # Productivity Calculation Documentation
 
 ## Overview
-This document explains how productivity, calculated time, and remaining time are computed in the Redmine MCP Dashboard.
+This document explains how productivity, calculated time, opening estimate, and remaining time are computed in the Redmine MCP Dashboard.
 
 ## Key Concepts
 
@@ -17,7 +17,25 @@ This document explains how productivity, calculated time, and remaining time are
 This shows how efficiently the user worked compared to what should have been done.
 
 ### 4. Remaining Time
-**Remaining Time** applies only to "Project Management" and "Deployment" tickets that are closed with multiple users logging time. It shows how much of the estimated time is still unaccounted for.
+**Remaining Time** is the dynamic "what is still left now" value for the selected reporting period.
+
+- For carry-over tickets in period-based reports, it follows:  
+  **Remaining Time = max(0, Opening Estimate - Time Spent in Selected Period)**
+- For closed-ticket special handling, it can be based on total logged by all users (see Rule 3 and Rule 6 notes).
+
+### 5. Opening Estimate (Prorated Carry-over)
+**Opening Estimate** is the estimate runway available at the start of the selected period.
+
+**Formula**:  
+**Opening Estimate = max(0, Original Estimated Hours - Hours Logged Before Period Start)**
+
+This is the "Prorated Carry-over" baseline used to avoid counting previous months' work as available effort in the current month.
+
+### 6. Carried Over Ticket Marker
+If a ticket has any hours logged before the selected period, it is flagged as carry-over.
+
+- **Condition**: `Hours Logged Before Period > 0`
+- **UI/CSV label**: ticket subject includes suffix **`[Carried Over]`**
 
 ---
 
@@ -109,7 +127,7 @@ This shows how efficiently the user worked compared to what should have been don
 - Calculated Time: min(2h, 3h) = 2h
 - Productivity: 2h/3h = 66.7% ⚠️
 
-**Rationale**: For in-progress work, we track what was already done in previous periods and only count the remaining estimated time for the current period. This prevents users from being unfairly penalized or rewarded based on work done in previous months.
+**Rationale**: For in-progress work, we track what was already done in previous periods and only count the remaining estimated time for the current period. This is the Prorated Carry-over behavior and prevents users from being unfairly penalized or rewarded based on work done in previous months.
 
 ### Rule 6: All Other Statuses (Cumulative Tracking)
 - **When**: Any status except "Closed with multiple users"
@@ -134,6 +152,20 @@ This shows how efficiently the user worked compared to what should have been don
 - Productivity: 25h/3.25h = 769% ❌ (incorrect)
 
 **Rationale**: Cumulative tracking ensures fair productivity measurement regardless of ticket status, preventing inflated productivity scores when users complete work efficiently.
+
+### Rule 7: Prorated Carry-over Metrics (Period-Based Reporting)
+- **When**: A date-bounded range is selected (e.g., This Month / Last Month / custom from-to)
+- **Hours Before Period**: Sum of all issue time entries strictly before `from_date`
+- **Carried Over**: `true` if Hours Before Period > 0
+- **Opening Estimate**: `max(0, estimated_hours - hours_before_period)`
+- **Dynamic Remaining**: `max(0, opening_estimate - time_spent_in_selected_period)` (for carry-over reporting view)
+
+**Example**:
+- Original estimate: 10h
+- Logged before this month: 5h
+- Opening estimate (this month): 5h
+- Logged in this month: 2h
+- Remaining (this month): 3h
 
 ---
 
@@ -213,7 +245,7 @@ When a ticket spans multiple months, the calculation tracks cumulative progress:
 **Key Insight**: Once the estimated time is fully consumed in previous periods, any additional time logged shows as 0% productivity, accurately reflecting that the work exceeded the estimate.
 
 ### Remaining Time for Closed Tickets
-Remaining time is calculated for ALL closed tickets when:
+Closed-ticket remaining can be calculated when:
 1. Ticket status is "Closed"
 2. Ticket has estimated time (not N/A)
 3. Total time logged by all users < Estimated time
@@ -235,10 +267,11 @@ Remaining time is calculated for ALL closed tickets when:
 ## Implementation Notes
 
 - All calculations are performed server-side in the backend API
-- The frontend receives calculated_time, productivity, and remaining_time directly
+- The frontend receives calculated_time, productivity, remaining_time, opening_estimate, carried_over, and hours_logged_before_period directly
 - TBD detection is case-insensitive
 - PM/Deployment detection is case-insensitive
-- Remaining time is only shown for applicable tickets (others show "-")
+- CSV includes Opening Estimate and Hours Before Period columns
+- Carried-over tickets are labeled with `[Carried Over]`
 
 ---
 
@@ -251,5 +284,5 @@ To test these calculations, use:
 
 ---
 
-*Last Updated: October 7, 2025*
+*Last Updated: May 1, 2026*
 

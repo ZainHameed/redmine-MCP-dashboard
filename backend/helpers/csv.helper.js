@@ -33,19 +33,35 @@ const generateProductivityCSV = (allUsersData, fromDate, toDate) => {
   csvContent += `Generated: ${new Date().toISOString()}\n`;
   csvContent += `\n`;
   
-  // Column headers
-  csvContent += `User,Issue,Time Spent (h),Calculated Time (h),Productivity (%),Remaining Time (h)\n`;
+  // Column headers (Opening Estimate = prorated carry-over runway at period start)
+  csvContent += `User,Issue,Opening Estimate (h),Hours Before Period (h),Time Spent (h),Calculated Time (h),Productivity (%),Remaining Time (h)\n`;
   
   // User tickets with empty row between users
   allUsersData.forEach((userData, userIndex) => {
     userData.tickets.forEach(ticket => {
-      const issueLabel = `${ticket.status} #${ticket.ticket}: ${ticket.subject}`;
+      const trackerName = ticket.tracker || 'Unknown';
+      const carrySuffix = ticket.carried_over ? ' [Carried Over]' : '';
+      const issueLabel = `[${trackerName}] #${ticket.ticket}: ${ticket.subject}${carrySuffix}`;
+      const openingStr =
+        ticket.opening_estimate !== null && ticket.opening_estimate !== undefined
+          ? Number(ticket.opening_estimate).toFixed(2)
+          : '';
+      const priorStr =
+        ticket.hours_logged_before_period !== null && ticket.hours_logged_before_period !== undefined
+          ? Number(ticket.hours_logged_before_period).toFixed(2)
+          : '0';
       csvContent += `${escapeCsvValue(userData.userName)},`;
       csvContent += `${escapeCsvValue(issueLabel)},`;
+      csvContent += `${openingStr},`;
+      csvContent += `${priorStr},`;
       csvContent += `${ticket.time_spent?.toFixed(2) || '0'},`;
       csvContent += `${ticket.calculated_time?.toFixed(2) || '0'},`;
       csvContent += `${ticket.productivity !== null ? ticket.productivity : '0'},`;
-      csvContent += `${ticket.remaining_time !== null ? ticket.remaining_time.toFixed(2) : '0'}\n`;
+      const remainingStr =
+        ticket.remaining_time !== null && ticket.remaining_time !== undefined
+          ? Number(ticket.remaining_time).toFixed(2)
+            : '';
+      csvContent += `${remainingStr}\n`;
     });
     
     // Add empty row after each user's tickets (except the last user)

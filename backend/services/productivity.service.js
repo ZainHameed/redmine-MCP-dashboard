@@ -183,6 +183,7 @@ function finalizeProductivityResult(result, userTimeSpent, carryMetrics, resolut
   return {
     ...result,
     calculated_time: finalCalculatedTime,
+    productivity_basis: productivityBasis,
     productivity: finalProductivity,
     resolvedBeforePeriod: resolutionState.resolvedBeforePeriod,
     resolvedThisPeriod: resolutionState.resolvedThisPeriod,

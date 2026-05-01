@@ -30,18 +30,20 @@ const passesPanavidTargetVersionFilter = (issue, fixedVersionIds) => {
 
 const applyOpeningEstimateCap = (productivityData, timeSpent) => {
   const openingEstimate = productivityData.opening_estimate;
+  const calculatedTime = Number(productivityData.calculated_time || 0);
   if (openingEstimate === null || openingEstimate === undefined) {
-    return productivityData;
+    return {
+      ...productivityData,
+      productivity_basis: calculatedTime,
+    };
   }
 
-  const cappedCalculatedTime = Math.min(
-    Number(productivityData.calculated_time || 0),
-    Number(openingEstimate)
-  );
+  const productivityBasis = Math.min(calculatedTime, Number(openingEstimate));
 
   return {
     ...productivityData,
-    productivity: timeSpent > 0 ? Math.round((cappedCalculatedTime / timeSpent) * 100) : null,
+    productivity_basis: productivityBasis,
+    productivity: timeSpent > 0 ? Math.round((productivityBasis / timeSpent) * 100) : null,
   };
 };
 
@@ -163,6 +165,7 @@ const getProductivity = async (req, res) => {
             ticket: fullIssue.id,
             subject: fullIssue.subject,
             calculated_time: result.calculated_time,
+            productivity_basis: result.productivity_basis,
             time_spent: totalTimeSpent,
             productivity: result.productivity,
             remaining_time: result.remaining_time,
@@ -271,6 +274,7 @@ const exportProductivity = async (req, res) => {
             ticket: issue.id,
             subject: issue.subject,
             calculated_time: cappedProductivityData.calculated_time,
+            productivity_basis: cappedProductivityData.productivity_basis,
             time_spent: userTimeSpent,
             productivity: cappedProductivityData.productivity,
             remaining_time: cappedProductivityData.remaining_time,
@@ -290,13 +294,15 @@ const exportProductivity = async (req, res) => {
       
       // Calculate user totals
       const userTotalCalculatedTime = userTickets.reduce((sum, t) => sum + (t.calculated_time || 0), 0);
+      const userTotalProductivityBasis = userTickets.reduce((sum, t) => sum + (t.productivity_basis || 0), 0);
       const userTotalTimeSpent = userTickets.reduce((sum, t) => sum + (t.time_spent || 0), 0);
-      const userAvgProductivity = userTotalTimeSpent > 0 ? (userTotalCalculatedTime / userTotalTimeSpent) * 100 : 0;
+      const userAvgProductivity = userTotalTimeSpent > 0 ? (userTotalProductivityBasis / userTotalTimeSpent) * 100 : 0;
       
       allUsersData.push({
         userName,
         tickets: userTickets,
         totalCalculatedTime: userTotalCalculatedTime,
+        totalProductivityBasis: userTotalProductivityBasis,
         totalTimeSpent: userTotalTimeSpent,
         avgProductivity: userAvgProductivity,
       });
@@ -309,6 +315,9 @@ const exportProductivity = async (req, res) => {
     // Set headers for CSV download
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.send(csvContent);
     
   } catch (error) {

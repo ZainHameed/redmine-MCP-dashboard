@@ -18,19 +18,23 @@ const escapeCsvValue = (value) => {
 };
 
 const applyOpeningEstimateCap = (ticket) => {
+  const calculatedTime = Number(ticket.calculated_time || 0);
   if (ticket.opening_estimate === null || ticket.opening_estimate === undefined) {
-    return ticket;
+    return {
+      ...ticket,
+      productivity_basis: ticket.productivity_basis !== undefined
+        ? Number(ticket.productivity_basis || 0)
+        : calculatedTime,
+    };
   }
 
   const timeSpent = Number(ticket.time_spent || 0);
-  const cappedCalculatedTime = Math.min(
-    Number(ticket.calculated_time || 0),
-    Number(ticket.opening_estimate)
-  );
+  const productivityBasis = Math.min(calculatedTime, Number(ticket.opening_estimate));
 
   return {
     ...ticket,
-    productivity: timeSpent > 0 ? Math.round((cappedCalculatedTime / timeSpent) * 100) : null,
+    productivity_basis: productivityBasis,
+    productivity: timeSpent > 0 ? Math.round((productivityBasis / timeSpent) * 100) : null,
   };
 };
 
@@ -46,12 +50,7 @@ const generateProductivityCSV = (allUsersData, fromDate, toDate) => {
   const cappedUsersData = allUsersData.map((userData) => {
     const tickets = userData.tickets.map(applyOpeningEstimateCap);
     const totalCalculatedTime = tickets.reduce((sum, ticket) => sum + Number(ticket.calculated_time || 0), 0);
-    const totalProductivityBasis = tickets.reduce((sum, ticket) => {
-      if (ticket.opening_estimate === null || ticket.opening_estimate === undefined) {
-        return sum + Number(ticket.calculated_time || 0);
-      }
-      return sum + Math.min(Number(ticket.calculated_time || 0), Number(ticket.opening_estimate));
-    }, 0);
+    const totalProductivityBasis = tickets.reduce((sum, ticket) => sum + Number(ticket.productivity_basis || 0), 0);
     const totalTimeSpent = tickets.reduce((sum, ticket) => sum + Number(ticket.time_spent || 0), 0);
     return {
       ...userData,
@@ -89,10 +88,7 @@ const generateProductivityCSV = (allUsersData, fromDate, toDate) => {
           : '0';
       const displayTimeSpent = Number(ticket.time_spent || 0);
       const displayCalculatedTime = Number(ticket.calculated_time || 0);
-      const productivityBasis =
-        ticket.opening_estimate !== null && ticket.opening_estimate !== undefined
-          ? Math.min(displayCalculatedTime, Number(ticket.opening_estimate))
-          : displayCalculatedTime;
+      const productivityBasis = Number(ticket.productivity_basis || 0);
       const displayProductivity =
         displayTimeSpent > 0
           ? Math.round((productivityBasis / displayTimeSpent) * 100)

@@ -63,14 +63,18 @@ export class ProductivityTabComponent implements OnInit, OnDestroy {
     const calculatedTime = Number(item.calculated_time || 0);
 
     if (openingEstimate === null || openingEstimate === undefined) {
-      return item;
+      return {
+        ...item,
+        productivity_basis: item.productivity_basis !== undefined ? Number(item.productivity_basis || 0) : calculatedTime
+      };
     }
 
-    const cappedCalculatedTime = Math.min(calculatedTime, Number(openingEstimate));
+    const productivityBasis = Math.min(calculatedTime, Number(openingEstimate));
 
     return {
       ...item,
-      productivity: timeSpent > 0 ? Math.round((cappedCalculatedTime / timeSpent) * 100) : null
+      productivity_basis: productivityBasis,
+      productivity: timeSpent > 0 ? Math.round((productivityBasis / timeSpent) * 100) : null
     };
   }
 
@@ -139,6 +143,7 @@ export class ProductivityTabComponent implements OnInit, OnDestroy {
           opening_estimate: item.opening_estimate,
           hours_logged_before_period: item.hours_logged_before_period ?? 0,
           calculated_time: item.calculated_time !== undefined ? item.calculated_time : 0,
+          productivity_basis: item.productivity_basis !== undefined ? item.productivity_basis : 0,
           time_spent: item.time_spent,
           productivity: item.productivity,
           remaining_time: item.remaining_time,
@@ -341,12 +346,7 @@ export class ProductivityTabComponent implements OnInit, OnDestroy {
     // Calculate totals
     this.totalTimeSpent = this.productivityTickets.reduce((sum, ticket) => sum + (ticket.time_spent || 0), 0);
     const totalCalculatedTime = this.productivityTickets.reduce((sum, ticket) => sum + (ticket.calculated_time || 0), 0);
-    const totalProductivityBasis = this.productivityTickets.reduce((sum, ticket) => {
-      if (ticket.opening_estimate === null || ticket.opening_estimate === undefined) {
-        return sum + (ticket.calculated_time || 0);
-      }
-      return sum + Math.min(ticket.calculated_time || 0, Number(ticket.opening_estimate));
-    }, 0);
+    const totalProductivityBasis = this.productivityTickets.reduce((sum, ticket) => sum + (ticket.productivity_basis || 0), 0);
     this.totalEstimatedHours = totalCalculatedTime; // Store calculated time in totalEstimatedHours for display
     
     // Average productivity uses opening estimate as the cap for carried-over tickets.
@@ -372,7 +372,7 @@ export class ProductivityTabComponent implements OnInit, OnDestroy {
     const projectIds = this.selectedProjects.join(',');
 
     // Build URL with parameters (use relative path for proxy)
-    let url = `/api/productivity/export?user_ids=${userIds}&project_ids=${projectIds}`;
+    let url = `/api/productivity/export?user_ids=${userIds}&project_ids=${projectIds}&_=${Date.now()}`;
     
     if (from && to) {
       url += `&from_date=${from}&to_date=${to}`;
